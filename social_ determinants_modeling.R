@@ -7,6 +7,8 @@ library(readr)
 library(labelled)
 library(magrittr)
 library(haven)
+library(lavaan)
+library(tidySEM)
 
 ## filter data to include these variables 
 dog_id,dd_sex,dd_breed_pure,dd_age_years,pa_activity_level,
@@ -186,3 +188,44 @@ summary(glmer(disease_count ~ MR1 + MR2+ MR3 + MR4 + MR5 + scale(dd_age_years) +
 
 summary(lmer(mobility ~ MR1 + MR2+ MR3 + MR4 + MR5 + scale(dd_age_years) + 
                             scale(dd_weight_lbs) + (1|dd_breed_pure), data = purebred_only))
+                            
+                        
+
+##SEM 
+
+##writing the general model layout for the confirmatory factor analysis to establish latent variables
+
+SE.model <- '#measurement model 
+finance =~ cv_median_income + od_annual_income_range_usd + cv_pct_below_125povline
+health =~ disease_count + hs_general_health + pa_activity_level
+social =~ de_routine_hours_per_day_with_other_animals + de_routine_hours_per_day_with_adults + de_routine_hours_per_day_with_children
+environment =~ cv_population_density +  wv_walkscore_descrip + cv_pct_same_house_1yrago + cv_pct_us_born
+#regressions
+health ~ social
+health ~ environment
+health ~ finance 
+health ~ dd_age_years
+health ~ dd_weight_lbs
+'
+
+#fit the model
+cfa_fit <- cfa(SE.model, estimator = "ULS", data=final_df)
+
+#print summary of the model fit
+summary(cfa_fit, fit.measures=TRUE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
