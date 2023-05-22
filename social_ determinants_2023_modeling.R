@@ -206,6 +206,7 @@ health ~ environment
 health ~ finance 
 health ~ dd_age_years
 health ~ dd_weight_lbs
+finance ~ environment
 '
 
 #fit the model
