@@ -2,22 +2,18 @@
 Code for McCoy, Brassington, et al, 2023, Social determinants of health and disease in companion dogs: A cohort study from the Dog Aging Project . doi: 10.1093/emph/eoad011 
 
 
-# apply for access here https://dogagingproject.org/open_data_access/
-load("~/HLES_dog_owner")
-load("~/HLES_health_conditions")
-load("~/HLES_cancer_conditions")
-load("~/ENVIRONMENT")
-load("~/DogOverview")
+# apply for access here https://dogagingproject.org/open_data_access/ and download these files:
+"HLES_dog_owner", "HLES_health_conditions", "HLES_cancer_conditions", "ENVIRONMENT", and "DogOverview"
 
-# packages required 
+## packages required 
 library(dplyr)
 library(readr)
 library(labelled)
 library(magrittr)
 library(haven)
 
-##filter data to include these variables 
-(dog_id,dd_sex,dd_breed_pure,dd_age_years,pa_activity_level,
+## filter data to include these variables 
+dog_id,dd_sex,dd_breed_pure,dd_age_years,pa_activity_level,
                                          pa_avg_activity_intensity,pa_avg_daily_active_hours,pa_avg_daily_active_minutes,
                                          pa_on_leash_off_leash_walk,pa_on_leash_walk_average_pace_pct,pa_on_leash_walk_avg_hours,
                                          pa_on_leash_walk_avg_minutes,pa_on_leash_walk_brisk_pace_pct,pa_on_leash_walk_frequency,
@@ -42,7 +38,7 @@ library(haven)
                                          od_max_education,od_age_range_years,od_annual_income_range_usd,hs_general_health,
                                          de_recreational_spaces, cv_disadvantage_index, cv_median_income, dog_id, cv_stability_index, 
                                          wv_walkscore_descrip, cv_pct_less_than_100k,cv_pct_below_125povline,cv_pct_jobless16to64mf, 
-                                         cv_population_density, cv_pct_same_house_1yrago, cv_pct_owner_occupied, cv_pct_us_born, Breed_Status)
+                                         cv_population_density, cv_pct_same_house_1yrago, cv_pct_owner_occupied, cv_pct_us_born, Breed_Status
 
 
 ## creating the dataframe for factor analysis 
@@ -57,60 +53,53 @@ new_df <- df %>% select(cv_median_income,od_annual_income_range_usd,cv_pct_less_
                                de_recreational_spaces,wv_walkscore_descrip,cv_population_density, 
                                de_routine_hours_per_day_in_garage, oc_secondary_residence, cv_pct_same_house_1yrago, cv_pct_owner_occupied, cv_pct_us_born)
 
-## change rownames to dog_id
+##change rownames to dog_id
+
 rownames(new_df)=mega_block$dog_id
 
-## remove dog_id for factor analysis  
+##remove dog_id for factor analysis  
+
 new_df <- new_df[,1:32]
 
-#Run factor analysis and specify 5 factors
+##run factor analysis and specify 5 factors
+
 factor_model = fa(new_df, 5)
 
 ##pulling out loadings for each factor
+
 factor_model_loadings <- as.data.frame.table(factor_model$loadings)
 
+##extract scores 
 
-## Extract scores 
 factor_model_scores <- as.data.frame(factor_model_loadings$scores)
 
 
-##after looking at factor loadings, decided to flip the signs for MR2 and MR5 to make sure that high values are 
-## associated with more income (MR2) and older owners (MR5)
-
-factor_model_scores[,2]=factor_model_scores[,2]*-1
-factor_model_scores[,5]=factor_model_scores[,5]*-1
 
 
-factor_model_scores$dog_id <- df$dog_id
-factor_model_final <- left_join(df, factor_model_scores, by="dog_id")
-
-
-
-##creating mobility metric 
+## creating mobility metric 
 ##pulling out z-scores of desired variables 
 mobility_df <- df %>% select(pa_activity_level, pa_avg_activity_intensity, pa_on_leash_walk_frequency, 
                                        pa_other_aerobic_activity_frequency, pa_physical_games_frequency, 
                                        pa_avg_daily_active_total, pa_on_leash_walk_avg_total) %>% mutate_all(.,scale)
 mobility_df$mobility <- rowMeans(mobility_df)
-mobility_df$dog_id <- mega_block$dog_id
-mb_final_mobility = factor_model_final
-mb_final_mobility$mobility <- mobility_df$mobility
 
-##combinine disease, mobility, and fa results dfs
+
+## combinine disease, mobility, and fa results dfs
 final_df <- factor_model_final
 final_df$mobility = mb_final_mobility$mobility
 final_df <- left_join(final_df, disease_count, by="dog_id")
 
 
-#add in cancer 
+## add in cancer incidence
 final_df <- left_join(final_df, cancer, by="dog_id")
 final_df$disease_count <- final_df$disease_count + final_df$cancer
 
 
 
-####modeling####
+## modeling
 
 ##health 
+
 lm(health ~ MR1 + MR2+ MR3 + MR4 + MR5 + scale(dd_age_years) + scale(dd_weight_lbs), data = final_df)
 
 library(MASS)
@@ -120,25 +109,31 @@ p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
 ctable <- cbind(ctable, "p value" = p)
 
 ##disease
+
 glm(disease_count ~ MR1 + MR2+ MR3 + MR4 + MR5 + scale(dd_age_years) + scale(dd_weight_lbs), data = final_df, family= poisson)
 
 ##mobility
+
 lm(mobility ~ MR1 + MR2+ MR3 + MR4 + MR5 + scale(dd_age_years) + scale(dd_weight_lbs), data = final_df)
 
 
 
 ###interactive models
+
 ##health
+
 lm(health ~ MR1*scale(dd_age_years) + MR2*scale(dd_age_years)+ MR3*scale(dd_age_years) + MR4*scale(dd_age_years) + MR5*scale(dd_age_years) +
                              MR1*scale(dd_weight_lbs) + MR2*scale(dd_weight_lbs)+ MR3*scale(dd_weight_lbs) + MR4*scale(dd_weight_lbs) + MR5*scale(dd_weight_lbs), data = final_df)
 
 
 ##disease
+
 glm(disease_count ~ MR1*scale(dd_age_years) + MR2*scale(dd_age_years)+ MR3*scale(dd_age_years) + MR4*scale(dd_age_years) + MR5*scale(dd_age_years) +
                               MR1*scale(dd_weight_lbs) + MR2*scale(dd_weight_lbs)+ MR3*scale(dd_weight_lbs) + MR4*scale(dd_weight_lbs) + MR5*scale(dd_weight_lbs), data = final_df, family= poisson)
 
 
 ##mobility
+
 lm(mobility ~ MR1*scale(dd_age_years) + MR2*scale(dd_age_years)+ MR3*scale(dd_age_years) + MR4*scale(dd_age_years) + MR5*scale(dd_age_years) +
                              MR1*scale(dd_weight_lbs) + MR2*scale(dd_weight_lbs)+ MR3*scale(dd_weight_lbs) + MR4*scale(dd_weight_lbs) + MR5*scale(dd_weight_lbs), data = final_df)
 
@@ -146,19 +141,23 @@ lm(mobility ~ MR1*scale(dd_age_years) + MR2*scale(dd_age_years)+ MR3*scale(dd_ag
 
 
 ###mixed vs pure models 
+
 ##health
+
 lm(health ~ MR1 + MR2 + MR3 + MR4 + MR5 + scale(dd_age_years) + 
                            scale(dd_weight_lbs), data = subset(final_df ,breed == "mixed"))
 lm(health ~ MR1 + MR2 + MR3 + MR4 + MR5 + scale(dd_age_years) + 
               scale(dd_weight_lbs), data = subset(final_df ,breed == "pure"))
 
 ##disease 
+
 glm(disease_count ~ MR1 + MR2 + MR3 + MR4 + MR5 + scale(dd_age_years) + 
               scale(dd_weight_lbs), family = poisson, data = subset(final_df,breed == "mixed"))
 glm(disease_count ~ MR1 + MR2 + MR3 + MR4 + MR5 + scale(dd_age_years) + 
               scale(dd_weight_lbs), family = poisson, data = subset(final_df,breed == "pure"))
 
 ##mobility 
+
 lm(mobility ~ MR1 + MR2 + MR3 + MR4 + MR5 + scale(dd_age_years) + 
               scale(dd_weight_lbs),data = subset(final_df,breed == "mixed"))
 lm(mobility ~ MR1 + MR2 + MR3 + MR4 + MR5 + scale(dd_age_years) + 
@@ -167,20 +166,27 @@ lm(mobility ~ MR1 + MR2 + MR3 + MR4 + MR5 + scale(dd_age_years) +
 
 
 
+
+
 ##Subset the data and run models with purebreed dogs only and control for breed as a random effect
+
 ##Linear mixed effects models controlling for breed as a random effect (use data= purebred_only)
+
 library(lmerTest)
 
-#general health
+#health
+
 summary(lmer(hs_general_health ~ MR1 + MR2+ MR3 + MR4 + MR5 + scale(dd_age_years) + 
                              scale(dd_weight_lbs) + (1|dd_breed_pure), data = purebred_only))
 
 
-#disease instances
+#disease
+
 summary(glmer(disease_count ~ MR1 + MR2+ MR3 + MR4 + MR5 + scale(dd_age_years) + 
                              scale(dd_weight_lbs) + (1|dd_breed_pure), data = purebred_only, family= poisson))
 
 
-#Mobility
+#mobility
+
 summary(lmer(mobility ~ MR1 + MR2+ MR3 + MR4 + MR5 + scale(dd_age_years) + 
                             scale(dd_weight_lbs) + (1|dd_breed_pure), data = purebred_only))
