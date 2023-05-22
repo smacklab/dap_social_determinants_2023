@@ -2,21 +2,19 @@
 Code for McCoy, Brassington, et al, 2023, Social determinants of health and disease in companion dogs: A cohort study from the Dog Aging Project . doi: 10.1093/emph/eoad011 
 
 
-
-#packages needed 
-library(dplyr)
-library(readr)
-library(labelled)
-library(magrittr)
-library(haven)
-
-#DAP files needed 
 # apply for access here https://dogagingproject.org/open_data_access/
 load("~/HLES_dog_owner")
 load("~/HLES_health_conditions")
 load("~/HLES_cancer_conditions")
 load("~/ENVIRONMENT")
 load("~/DogOverview")
+
+# packages required 
+library(dplyr)
+library(readr)
+library(labelled)
+library(magrittr)
+library(haven)
 
 ##filter data to include these variables 
 (dog_id,dd_sex,dd_breed_pure,dd_age_years,pa_activity_level,
